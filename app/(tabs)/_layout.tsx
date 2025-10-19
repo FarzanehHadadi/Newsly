@@ -4,7 +4,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-
+// 6f99163c61634873aab687d828cfae44
+// GET https://newsapi.org/v2/everything?q=tesla&from=2025-09-19&sortBy=publishedAt&apiKey=
+// https://newsapi.org/
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
