@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
-      {/* <Link href={"/(tabs)/home"}>go back to home</Link> */}
+      <Link href={"/(tabs)"}>go back to home</Link>
     </SafeAreaView>
   );
 }

@@ -11,18 +11,19 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
         tabBarButton: HapticTab,
       }}
     >
       <Tabs.Screen
-        name="home"
+        name="index"
         options={{
-          tabBarIcon: ({ color }) => (
+          title: "Home",
+          tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
               name="newspaper-variant-multiple"
-              size={32}
+              size={size}
               color={color}
             />
           ),
@@ -31,10 +32,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="bookmark"
         options={{
-          tabBarIcon: ({ color }) => (
+          title: "Bookmarks",
+          tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
               name="bookmark-outline"
-              size={32}
+              size={size}
               color={color}
             />
           ),
@@ -43,10 +45,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ color }) => (
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
               name="account-outline"
-              size={32}
+              size={size}
               color={color}
             />
           ),
