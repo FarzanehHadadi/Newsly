@@ -2,21 +2,24 @@ import {
   DarkTheme,
   DefaultTheme,
   ThemeProvider,
-} from "@react-navigation/native";
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import "react-native-reanimated";
+} from '@react-navigation/native';
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import 'react-native-reanimated';
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ title: "Newsly" }} />
-        <Stack.Screen name="article/[news]" options={{ title: "Article" }} />
+        <Stack.Screen name="(tabs)" options={{ title: 'Newsly' }} />
+        <Stack.Screen
+          name="article/[news]/index"
+          options={{ title: 'Article' }}
+        />
       </Stack>
 
       <StatusBar style="auto" />
