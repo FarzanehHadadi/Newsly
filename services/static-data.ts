@@ -26,7 +26,7 @@ export const staticData = [
       'Louis Tomlinson is getting candid about his grieving journey one year after the death of his One Direction bandmate Liam Payne.',
     id: 'b18ad13d9331c5c1d907d3e3fe0107cd',
     image:
-      'https://images.toofab.com/image/71/16by9/2025/10/18/716c1c7933cb4a54b6525ea28897e11e_xl.jpg',
+      'https://gigxels.com/storage/md/photos/lorena-samardic-1255/louis-tomlinson-cluj-napoca-february-2018-ff8bdabd19.jpg',
     lang: 'en',
     publishedAt: '2025-10-18T23:34:00Z',
     source: {
