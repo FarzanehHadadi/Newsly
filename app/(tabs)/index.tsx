@@ -1,26 +1,42 @@
 import { getNewsByKeyword } from '@/services/get-news';
-import { Link } from 'expo-router';
+import { NewsData } from '@/services/static-data';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-  const [data, setData] = useState([]);
-  console.log('🚀 ~ HomeScreen ~ data:', data);
+  const [data, setData] = useState<NewsData>([]);
   useEffect(() => {
     getNewsByKeyword().then((data) => setData(data));
   }, []);
   return (
     <SafeAreaView style={styles.container}>
-      <Text>Text</Text>
-      <Link
-        href={{
-          pathname: '/article/[news]',
-          params: { news: 'test' },
-        }}
-      >
-        View News
-      </Link>
+      <FlatList
+        data={data}
+        renderItem={({ item }) => (
+          <View style={{ paddingVertical: 28, paddingHorizontal: 10 }}>
+            <View
+              style={{
+                margin: 2,
+                display: 'flex',
+                flexDirection: 'row',
+                gap: 10,
+                alignItems: 'center',
+              }}
+            >
+              <Image
+                src={item.image}
+                width={45}
+                height={45}
+                style={{ borderRadius: 4 }}
+              />
+              <Text style={{ fontWeight: 700 }}>{item.title}</Text>
+            </View>
+            <Text>{item.description}</Text>
+          </View>
+        )}
+        keyExtractor={(item) => item.id}
+      />
     </SafeAreaView>
   );
 }
