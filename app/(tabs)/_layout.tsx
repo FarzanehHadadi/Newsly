@@ -9,11 +9,11 @@ import React from 'react';
 // https://newsapi.org/
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-
+  console.log('first!!!!!!!!!!!!!!!!!!!!!');
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
       }}
@@ -21,7 +21,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: 'Home',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
               name="newspaper-variant-multiple"
@@ -34,7 +34,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="bookmark"
         options={{
-          title: "Bookmarks",
+          title: 'Bookmarks',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
               name="bookmark-outline"
@@ -47,7 +47,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons
               name="account-outline"
