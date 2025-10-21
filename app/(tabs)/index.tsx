@@ -1,8 +1,8 @@
-import { Button } from '@/components/ui/button';
-import { getNewsByKeyword } from '@/services/get-news';
-import { NewsData } from '@/services/static-data';
-import { useTheme } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { getNewsByKeyword } from "@/services/get-news";
+import { NewsData } from "@/services/static-data";
+import { useTheme } from "@react-navigation/native";
+import { useEffect, useState } from "react";
 import {
   FlatList,
   Image,
@@ -10,8 +10,8 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   const [data, setData] = useState<NewsData>([]);
@@ -23,24 +23,54 @@ export default function HomeScreen() {
   const styles = getStyles(theme);
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView horizontal>
-        <Button variant="default" label="All" onPress={() => {}} />
-        <Button variant="default" label="Sport" onPress={() => {}} />
-        <Button variant="default" label="Weather" onPress={() => {}} />
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          width: "100%",
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 8,
+          paddingHorizontal: 12,
+        }}
+      >
+        <Button variant="default" size="lg" label="All" onPress={() => {}} />
+        <Button variant="default" size="lg" label="Sport" onPress={() => {}} />
+        <Button
+          variant="default"
+          size="lg"
+          label="Weather"
+          onPress={() => {}}
+        />
       </ScrollView>
       <FlatList
         data={data}
         renderItem={({ item }) => (
           <View style={styles.list}>
-            <Text style={styles.itemTitle}>{item.title}</Text>
-            <Text style={styles.itemDescription}>{item.description}</Text>
             <Image
               src={item.image}
-              width={300}
-              height={300}
+              width={56}
+              height={56}
               style={styles.itemImage}
               resizeMode="cover"
             />
+            <View style={styles.textContainer}>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={styles.itemTitle}
+              >
+                {item.title}
+              </Text>
+              <Text
+                numberOfLines={2}
+                ellipsizeMode="tail"
+                style={styles.itemDescription}
+              >
+                {item.description}
+              </Text>
+            </View>
+
             <View style={styles.itemDivider} />
           </View>
         )}
@@ -59,7 +89,7 @@ const getStyles = (theme: any) =>
     },
     contentContainer: {
       paddingHorizontal: 20,
-      alignItems: 'center',
+      alignItems: "center",
     },
     itemDivider: {
       height: 1,
@@ -67,24 +97,36 @@ const getStyles = (theme: any) =>
       marginTop: 16,
     },
     itemImage: {
-      borderRadius: 4,
+      borderRadius: 12,
       marginTop: 8,
     },
     itemTitle: {
       color: theme.colors.text,
 
-      fontWeight: '500',
+      fontWeight: "500",
       fontSize: 18,
       marginBottom: 4,
     },
     itemDescription: {
-      fontWeight: '400',
+      fontWeight: "400",
       color: theme.colors.text,
       fontSize: 14,
     },
     list: {
-      width: '90%', // ✅ makes padding visible and keeps content centered
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 8,
+      width: "90%",
       marginVertical: 20,
+    },
+    textContainer: {},
+    buttonContainer: {
+      flex: 1,
+      flexDirection: "row",
+      marginBottom: 20,
+      justifyContent: "space-between",
+      alignItems: "center",
     },
   });
 // const styles = StyleSheet.create({
