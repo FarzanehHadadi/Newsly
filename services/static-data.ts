@@ -21,26 +21,6 @@ export const staticData = [
   },
   {
     content:
-      'The singer -- who lost his mom in 2016 and his sister in 2019, before Payne passed away last October -- opens up about navigating grief, while also reflecting on his friendship with Payne and their former One Direction bandmates. Louis Tomlinson is g...',
-    description:
-      'Louis Tomlinson is getting candid about his grieving journey one year after the death of his One Direction bandmate Liam Payne.',
-    id: 'b18ad13d9331c5c1d907d3e3fe0107cd',
-    image:
-      'https://gigxels.com/storage/md/photos/lorena-samardic-1255/louis-tomlinson-cluj-napoca-february-2018-ff8bdabd19.jpg',
-    lang: 'en',
-    publishedAt: '2025-10-18T23:34:00Z',
-    source: {
-      country: 'us',
-      id: '1567ee2f212fd29d11c3966a4d4c0b0a',
-      name: 'TooFab',
-      url: 'https://toofab.com',
-    },
-    title:
-      "Louis Tomlinson Says He'll 'Never Really Accept' Liam Payne's Death",
-    url: 'https://toofab.com/2025/10/18/louis-tomlinson-liam-payne-death/',
-  },
-  {
-    content:
       "Qualifying for Formula 1's United States Grand Prix capped off an impressive day of drama at Austin. Here's our pick of the biggest winners and losers from grand prix qualifying. Loser: Isack Hadjar (20th) With Yuki Tsunoda still struggling and the R...",
     description:
       "There were plenty of winners and losers from qualifying for Formula 1's United States Grand Prix",
@@ -154,6 +134,26 @@ export const staticData = [
     },
     title: 'Instant takeaways from Georgia football’s victory over Ole Miss',
     url: 'https://247sports.com/college/georgia/longformarticle/instant-takeaways-from-georgia-footballs-victory-over-ole-miss-257540998/',
+  },
+  {
+    content:
+      'The singer -- who lost his mom in 2016 and his sister in 2019, before Payne passed away last October -- opens up about navigating grief, while also reflecting on his friendship with Payne and their former One Direction bandmates. Louis Tomlinson is g...',
+    description:
+      'Louis Tomlinson is getting candid about his grieving journey one year after the death of his One Direction bandmate Liam Payne.',
+    id: 'b18ad13d9331c5c1d907d3e3fe0107cd',
+    image:
+      'https://gigxels.com/storage/md/photos/lorena-samardic-1255/louis-tomlinson-cluj-napoca-february-2018-ff8bdabd19.jpg',
+    lang: 'en',
+    publishedAt: '2025-10-18T23:34:00Z',
+    source: {
+      country: 'us',
+      id: '1567ee2f212fd29d11c3966a4d4c0b0a',
+      name: 'TooFab',
+      url: 'https://toofab.com',
+    },
+    title:
+      "Louis Tomlinson Says He'll 'Never Really Accept' Liam Payne's Death",
+    url: 'https://toofab.com/2025/10/18/louis-tomlinson-liam-payne-death/',
   },
   {
     content:
