@@ -1,4 +1,6 @@
 // utils/newsApi.js
+import axios from 'axios';
+
 const BASE_URL = 'https://newslyrn.netlify.app/'; // Replace with your actual Netlify URL
 
 export const fetchNews = async (category = null) => {
@@ -20,65 +22,8 @@ export const fetchNews = async (category = null) => {
     throw error;
   }
 };
-/**
- * // hooks/useNews.js
-import { useState, useEffect } from 'react';
-import { fetchNews } from '../utils/newsApi';
-
-export const useNews = (category = null) => {
-  const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const loadNews = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchNews(category);
-        setArticles(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadNews();
-  }, [category]);
-
-  return { articles, loading, error, refetch: () => loadNews() };
+export const getArticleById = async (id: string) => {
+  const url = `${BASE_URL}/.netlify/functions/getArticleById?id=${id}`;
+  const response = await axios.get(url);
+  return response.data;
 };
- */
-
-/**
- * // components/NewsList.js
-import React from 'react';
-import { View, Text, FlatList, ActivityIndicator } from 'react-native';
-import { useNews } from '../hooks/useNews';
-
-const NewsList = ({ category }) => {
-  const { articles, loading, error } = useNews(category);
-
-  if (loading) return <ActivityIndicator size="large" />;
-  if (error) return <Text>Error: {error}</Text>;
-
-  const renderArticle = ({ item }) => (
-    <View style={{ padding: 10, borderBottomWidth: 1 }}>
-      <Text style={{ fontWeight: 'bold' }}>{item.title}</Text>
-      <Text>{item.description}</Text>
-      <Text style={{ color: 'gray' }}>{item.source} • {item.category}</Text>
-    </View>
-  );
-
-  return (
-    <FlatList
-      data={articles}
-      renderItem={renderArticle}
-      keyExtractor={(item) => item.url}
-    />
-  );
-};
-
-export default NewsList;
- */
