@@ -9,7 +9,6 @@ import React from 'react';
 // https://newsapi.org/
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  console.log('first!!!!!!!!!!!!!!!!!!!!!');
   return (
     <Tabs
       screenOptions={{

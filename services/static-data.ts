@@ -203,11 +203,11 @@ export interface NewsSource {
 }
 
 export interface NewsItem {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   content: string;
-  image: string;
+  imageUrl: string;
   url: string;
   lang: string;
   publishedAt: string; // ISO date string

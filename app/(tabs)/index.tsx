@@ -1,32 +1,34 @@
-import { Button } from "@/components/ui/button";
-import CarouselComponent from "@/components/ui/carousel";
-import { Input } from "@/components/ui/input";
-import { getNewsByKeyword } from "@/services/get-news";
-import { NewsData } from "@/services/static-data";
-import { useTheme } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import { Button } from '@/components/ui/button';
+import CarouselComponent from '@/components/ui/carousel';
+import { Input } from '@/components/ui/input';
+import { useTheme } from '@react-navigation/native';
+import { useEffect, useState } from 'react';
 import {
   FlatList,
   Image,
   ScrollView,
   StyleSheet,
-  Text,
   View,
   TouchableOpacity,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import type { NewsData } from '@/services/static-data';
+import { useRouter } from 'expo-router';
+import { Text } from '@/components/ui/text';
+import { fetchNews } from '@/services/netlify-news';
 
 export default function HomeScreen() {
   const [data, setData] = useState<NewsData>([]);
+  console.log('🚀 ~ HomeScreen ~ data:', data?.[0]?.imageUrl);
 
   useEffect(() => {
-    getNewsByKeyword().then((data) => setData(data));
+    fetchNews().then((data) => setData(data));
   }, []);
 
   const theme = useTheme();
   const styles = getStyles(theme);
-
+  const router = useRouter();
   return (
     <SafeAreaView style={styles.container} edges={[]}>
       <FlatList
@@ -57,27 +59,22 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoryContainer}
             >
+              <Button variant="link" size="sm" label="All" onPress={() => {}} />
               <Button
-                variant="default"
-                size="lg"
-                label="All"
-                onPress={() => {}}
-              />
-              <Button
-                variant="default"
-                size="lg"
+                variant="link"
+                size="sm"
                 label="Sport"
                 onPress={() => {}}
               />
               <Button
-                variant="default"
-                size="lg"
+                variant="link"
+                size="sm"
                 label="Weather"
                 onPress={() => {}}
               />
               <Button
-                variant="default"
-                size="lg"
+                variant="link"
+                size="sm"
                 label="Tech"
                 onPress={() => {}}
               />
@@ -88,9 +85,13 @@ export default function HomeScreen() {
           </>
         }
         renderItem={({ item }) => (
-          <View style={styles.list}>
+          <TouchableOpacity
+            style={styles.list}
+            onPress={() => router.push(`/article/${item._id}`)}
+            activeOpacity={0.7}
+          >
             <Image
-              src={item.image}
+              src={item.imageUrl}
               width={56}
               height={56}
               style={styles.itemImage}
@@ -112,9 +113,9 @@ export default function HomeScreen() {
                 {item.description}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       />
@@ -129,45 +130,45 @@ const getStyles = (theme: any) =>
       backgroundColor: theme.colors.background,
     },
     searchContainer: {
-      width: "100%",
+      width: '100%',
       marginBottom: 15,
       paddingHorizontal: 16,
       marginTop: 10,
     },
     inputWrapper: {
-      width: "100%",
-      position: "relative",
-      justifyContent: "center",
+      width: '100%',
+      position: 'relative',
+      justifyContent: 'center',
     },
     searchInput: {
-      width: "100%",
-      backgroundColor: "#eaeaea",
+      width: '100%',
+      backgroundColor: '#eaeaea',
       borderRadius: 8,
       paddingHorizontal: 12,
       paddingVertical: 10,
       paddingRight: 40, // space for the icon
     },
     iconWrapper: {
-      position: "absolute",
+      position: 'absolute',
       right: 12,
-      top: "50%",
+      top: '50%',
       transform: [{ translateY: -12 }],
     },
     categoryContainer: {
       paddingHorizontal: 16,
-      width: "100%",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
       gap: 8,
       marginBottom: 20,
     },
     list: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       gap: 8,
-      width: "100%",
+      width: '100%',
       marginVertical: 15,
       paddingHorizontal: 16,
     },
@@ -180,11 +181,11 @@ const getStyles = (theme: any) =>
     },
     itemTitle: {
       color: theme.colors.text,
-      fontWeight: "500",
+      fontWeight: '500',
       fontSize: 18,
     },
     itemDescription: {
-      fontWeight: "400",
+      fontWeight: '400',
       color: theme.colors.text,
       fontSize: 12,
     },
