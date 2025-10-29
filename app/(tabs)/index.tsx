@@ -4,7 +4,6 @@ import { useTheme, useFocusEffect } from "@react-navigation/native";
 import { useEffect, useState, useRef, useCallback } from "react";
 import {
   FlatList,
-  Image,
   ScrollView,
   StyleSheet,
   View,
@@ -13,13 +12,22 @@ import {
   Animated,
   TextInput,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { NewsData } from "@/services/static-data";
 import { useRouter } from "expo-router";
 import { Text } from "@/components/ui/text";
-import { fetchNews, searchNews } from "@/services/netlify-news";
+import {
+  fetchNews,
+  searchNews,
+  getCategories,
+  type Category,
+} from "@/services/netlify-news";
 import { toggleBookmark, isBookmarked } from "@/services/bookmark";
+import { useNetworkStatus } from "@/services/network";
+import { cacheImages } from "@/services/image-cache";
+import * as Haptics from "expo-haptics";
 
 export default function HomeScreen() {
   const [data, setData] = useState<NewsData>([]);
@@ -27,9 +35,12 @@ export default function HomeScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isLoadingCategory, setIsLoadingCategory] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const isManualToggleRef = useRef(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -37,6 +48,7 @@ export default function HomeScreen() {
   const stickySearchTranslateY = useRef(new Animated.Value(-60)).current;
   const searchInputRef = useRef<TextInput>(null);
   const HEADER_HEIGHT = 250;
+  const { isOnline } = useNetworkStatus();
 
   const refreshBookmarks = useCallback(async () => {
     if (isManualToggleRef.current) {
@@ -55,14 +67,11 @@ export default function HomeScreen() {
   }, [data]);
 
   useEffect(() => {
-    // Load bookmarks when data changes
     refreshBookmarks();
   }, [refreshBookmarks]);
 
-  // Refresh bookmarks when screen comes into focus (e.g., when returning from article detail)
   useFocusEffect(
     useCallback(() => {
-      // Only refresh if we have data and it's not a manual toggle
       if (data.length > 0 && !isManualToggleRef.current) {
         const refresh = async () => {
           const ids = new Set<string>();
@@ -80,16 +89,42 @@ export default function HomeScreen() {
   useEffect(() => {
     const loadInitialData = async () => {
       if (!isSearchMode) {
-        const result = await fetchNews(null, 1);
-        setData(result.articles);
-        setHasNextPage(result.pagination.hasNextPage || false);
-        setCurrentPage(1);
+        try {
+          const result = await fetchNews(selectedCategory, 1);
+          if (result && result.articles) {
+            setData(result.articles);
+            setHasNextPage(result.pagination?.hasNextPage || false);
+            setCurrentPage(1);
+            const imageUrls = result.articles
+              .map((item) => item.imageUrl)
+              .filter((url): url is string => Boolean(url));
+            if (imageUrls.length > 0) {
+              cacheImages(imageUrls).catch(console.error);
+            }
+          } else {
+            setData([]);
+            setHasNextPage(false);
+            setCurrentPage(1);
+          }
+        } catch (error) {
+          console.error("Error loading initial data:", error);
+          setData([]);
+          setHasNextPage(false);
+          setCurrentPage(1);
+        }
       }
     };
     loadInitialData();
-  }, [isSearchMode]);
+  }, [isSearchMode, selectedCategory]);
 
-  // Animate sticky search bar based on scroll position
+  useEffect(() => {
+    const loadCategories = async () => {
+      const cats = await getCategories();
+      setCategories(cats);
+    };
+    loadCategories();
+  }, []);
+
   useEffect(() => {
     const listener = scrollY.addListener(({ value }) => {
       if (value > HEADER_HEIGHT) {
@@ -124,25 +159,73 @@ export default function HomeScreen() {
     return () => {
       scrollY.removeListener(listener);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = async () => {
     if (searchQuery.trim() === "") {
       setIsSearchMode(false);
+      setSelectedCategory(null);
       const result = await fetchNews(null, 1);
       setData(result.articles);
       setHasNextPage(result.pagination.hasNextPage || false);
       setCurrentPage(1);
+      const imageUrls = result.articles
+        .map((item) => item.imageUrl)
+        .filter((url): url is string => Boolean(url));
+      if (imageUrls.length > 0) {
+        cacheImages(imageUrls).catch(console.error);
+      }
       return;
     }
 
     setIsSearching(true);
     setIsSearchMode(true);
+    setSelectedCategory(null);
     const results = await searchNews(searchQuery);
     setData(results);
     setHasNextPage(false);
     setIsSearching(false);
+    const imageUrls = results
+      .map((item) => item.imageUrl)
+      .filter((url): url is string => Boolean(url));
+    if (imageUrls.length > 0) {
+      cacheImages(imageUrls).catch(console.error);
+    }
+  };
+
+  const handleCategoryPress = async (categoryName: string | null) => {
+    setSelectedCategory(categoryName);
+    setIsSearchMode(false);
+    setSearchQuery("");
+
+    setIsLoadingCategory(true);
+    setData([]);
+
+    try {
+      const result = await fetchNews(categoryName, 1);
+      if (result && result.articles) {
+        setData(result.articles);
+        setHasNextPage(result.pagination?.hasNextPage || false);
+        setCurrentPage(1);
+        const imageUrls = result.articles
+          .map((item) => item.imageUrl)
+          .filter((url): url is string => Boolean(url));
+        if (imageUrls.length > 0) {
+          cacheImages(imageUrls).catch(console.error);
+        }
+      } else {
+        setData([]);
+        setHasNextPage(false);
+        setCurrentPage(1);
+      }
+    } catch (error) {
+      console.error("Error loading category news:", error);
+      setData([]);
+      setHasNextPage(false);
+      setCurrentPage(1);
+    } finally {
+      setIsLoadingCategory(false);
+    }
   };
 
   const loadMoreArticles = async () => {
@@ -150,9 +233,15 @@ export default function HomeScreen() {
 
     setIsLoadingMore(true);
     const nextPage = currentPage + 1;
-    const result = await fetchNews(null, nextPage);
+    const result = await fetchNews(selectedCategory, nextPage);
 
     if (result.articles.length > 0) {
+      const imageUrls = result.articles
+        .map((item) => item.imageUrl)
+        .filter((url): url is string => Boolean(url));
+      if (imageUrls.length > 0) {
+        cacheImages(imageUrls).catch(console.error);
+      }
       setData((prev) => [...prev, ...result.articles]);
       setHasNextPage(result.pagination.hasNextPage || false);
       setCurrentPage(nextPage);
@@ -163,11 +252,19 @@ export default function HomeScreen() {
   };
 
   const handleBookmarkPress = async (item: NewsData[0]) => {
-    // Mark that we're doing a manual toggle to prevent useEffect from interfering
     isManualToggleRef.current = true;
-
-    // Optimistically update the UI immediately
     const currentlyBookmarked = bookmarkedIds.has(item._id);
+
+    try {
+      if (currentlyBookmarked) {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        );
+      }
+    } catch {}
+
     setBookmarkedIds((prev) => {
       const newSet = new Set(prev);
       if (currentlyBookmarked) {
@@ -178,10 +275,8 @@ export default function HomeScreen() {
       return newSet;
     });
 
-    // Perform the actual toggle
     await toggleBookmark(item);
 
-    // Verify and sync with actual state
     const actualBookmarked = await isBookmarked(item._id);
     setBookmarkedIds((prev) => {
       const newSet = new Set(prev);
@@ -193,7 +288,6 @@ export default function HomeScreen() {
       return newSet;
     });
 
-    // Reset the flag after a short delay
     setTimeout(() => {
       isManualToggleRef.current = false;
     }, 300);
@@ -219,6 +313,12 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.stickySearchInner}>
+          {!isOnline && (
+            <View style={styles.stickyOfflineBadge}>
+              <MaterialCommunityIcons name="wifi-off" size={14} color="#fff" />
+              <Text style={styles.stickyOfflineBadgeText}>Offline</Text>
+            </View>
+          )}
           <View style={styles.inputWrapper}>
             <TextInput
               ref={searchInputRef}
@@ -243,7 +343,7 @@ export default function HomeScreen() {
       </Animated.View>
 
       <FlatList
-        data={isSearching ? [] : data}
+        data={isSearching || isLoadingCategory ? [] : data}
         onScroll={(e) => {
           const offsetY = e.nativeEvent.contentOffset.y;
           scrollY.setValue(offsetY);
@@ -259,14 +359,54 @@ export default function HomeScreen() {
           ) : null
         }
         ListEmptyComponent={
-          isSearching ? (
+          isSearching || isLoadingCategory ? (
             <View style={styles.listLoadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : data.length === 0 ? (
+            <View style={styles.emptyStateContainer}>
+              <MaterialCommunityIcons
+                name={isSearchMode ? "magnify" : "newspaper-variant-outline"}
+                size={64}
+                color={(theme.colors as any).secondaryText || "#999"}
+              />
+              <Text
+                style={[styles.emptyStateTitle, { color: theme.colors.text }]}
+              >
+                {isSearchMode ? "No results found" : "No articles found"}
+              </Text>
+              <Text
+                style={[
+                  styles.emptyStateMessage,
+                  { color: (theme.colors as any).secondaryText || "#666" },
+                ]}
+              >
+                {isSearchMode
+                  ? `No articles found for "${searchQuery}". Try a different search term.`
+                  : selectedCategory
+                  ? `No articles available in ${
+                      categories.find((c) => c.name === selectedCategory)
+                        ?.displayName || selectedCategory
+                    } category.`
+                  : "No articles available at the moment. Please try again later."}
+              </Text>
             </View>
           ) : null
         }
         ListHeaderComponent={
           <>
+            {/* Offline Badge in Header */}
+            {!isOnline && (
+              <View style={styles.offlineBadge}>
+                <MaterialCommunityIcons
+                  name="wifi-off"
+                  size={16}
+                  color="#fff"
+                />
+                <Text style={styles.offlineBadgeText}>Offline</Text>
+              </View>
+            )}
+
             {/* Search Bar with right icon */}
             <View style={styles.searchContainer}>
               <View style={styles.inputWrapper}>
@@ -298,26 +438,24 @@ export default function HomeScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.categoryContainer}
+              bounces={false}
+              alwaysBounceHorizontal={false}
             >
-              <Button variant="link" size="sm" label="All" onPress={() => {}} />
               <Button
                 variant="link"
                 size="sm"
-                label="Sport"
-                onPress={() => {}}
+                label="All"
+                onPress={() => handleCategoryPress(null)}
               />
-              <Button
-                variant="link"
-                size="sm"
-                label="Weather"
-                onPress={() => {}}
-              />
-              <Button
-                variant="link"
-                size="sm"
-                label="Tech"
-                onPress={() => {}}
-              />
+              {categories.map((category) => (
+                <Button
+                  key={category._id}
+                  variant="link"
+                  size="sm"
+                  label={category.displayName}
+                  onPress={() => handleCategoryPress(category.name)}
+                />
+              ))}
             </ScrollView>
 
             {/* Carousel */}
@@ -332,11 +470,11 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               <Image
-                src={item.imageUrl}
-                width={56}
-                height={56}
+                source={{ uri: item.imageUrl }}
                 style={styles.itemImage}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
               />
               <View style={styles.textContainer}>
                 <Text
@@ -432,10 +570,9 @@ const getStyles = (theme: any) =>
     },
     categoryContainer: {
       paddingHorizontal: 16,
-      width: "100%",
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "center",
+      justifyContent: "flex-start",
       gap: 8,
       marginBottom: 20,
     },
@@ -458,7 +595,10 @@ const getStyles = (theme: any) =>
       padding: 4,
     },
     itemImage: {
+      width: 56,
+      height: 56,
       borderRadius: 12,
+      backgroundColor: "#e0e0e0",
     },
     textContainer: {
       flex: 1,
@@ -487,5 +627,56 @@ const getStyles = (theme: any) =>
       alignItems: "center",
       minHeight: 400,
       paddingVertical: 40,
+    },
+    emptyStateContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      minHeight: 400,
+      paddingVertical: 60,
+      paddingHorizontal: 32,
+    },
+    emptyStateTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      marginTop: 24,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    emptyStateMessage: {
+      fontSize: 16,
+      textAlign: "center",
+      lineHeight: 24,
+    },
+    offlineBadge: {
+      backgroundColor: "#ff4444",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      gap: 6,
+    },
+    offlineBadgeText: {
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    stickyOfflineBadge: {
+      backgroundColor: "#ff4444",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      gap: 4,
+      borderRadius: 4,
+      marginBottom: 8,
+      alignSelf: "flex-start",
+    },
+    stickyOfflineBadgeText: {
+      color: "#fff",
+      fontSize: 10,
+      fontWeight: "600",
     },
   });

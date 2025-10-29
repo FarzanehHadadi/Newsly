@@ -19,6 +19,7 @@ import {
 } from "@/services/bookmark";
 import type { NewsItem } from "@/services/static-data";
 import { Text as CustomText } from "@/components/ui/text";
+import * as Haptics from "expo-haptics";
 
 export default function BookmarkScreen() {
   const [bookmarks, setBookmarks] = useState<NewsItem[]>([]);
@@ -50,7 +51,6 @@ export default function BookmarkScreen() {
     }
   }, []);
 
-  // Refresh bookmarks when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadBookmarks();
@@ -58,6 +58,18 @@ export default function BookmarkScreen() {
   );
 
   const handleBookmarkPress = async (item: NewsItem) => {
+    const wasBookmarked = bookmarkedIds.has(item._id);
+
+    try {
+      if (wasBookmarked) {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } else {
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success
+        );
+      }
+    } catch {}
+
     const newBookmarked = await toggleBookmark(item);
     setBookmarkedIds((prev) => {
       const newSet = new Set(prev);
@@ -69,7 +81,6 @@ export default function BookmarkScreen() {
       return newSet;
     });
 
-    // Remove from bookmarks list if unbookmarked
     if (!newBookmarked) {
       setBookmarks((prev) => prev.filter((b) => b._id !== item._id));
     }

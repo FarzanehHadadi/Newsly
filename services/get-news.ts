@@ -6,15 +6,3 @@ const url =
   category +
   '&lang=en&country=us&max=10&apikey=' +
   apiKey;
-
-/**
- * // Get basic category list
-const response = await fetch('https://newslyrn.netlify.app/.netlify/functions/getCategories');
-const data = await response.json();
-// data.categories contains array of categories
-
-// Get categories with article counts
-const response = await fetch('https://newslyrn.netlify.app/.netlify/functions/getCategories?includeStats=true');
-const data = await response.json();
-// data.categories contains categories with articleCount
- */
