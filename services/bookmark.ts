@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import * as Haptics from 'expo-haptics';
 import type { NewsItem } from './static-data';
 
 const BOOKMARK_KEY = 'bookmarks';
@@ -53,9 +54,17 @@ export const toggleBookmark = async (article: NewsItem): Promise<boolean> => {
 
         if (isBookmark) {
             await removeBookmark(article._id);
+            try {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            } catch {
+            }
             return false;
         } else {
             await addBookmark(article);
+            try {
+                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch {
+            }
             return true;
         }
     } catch (error) {

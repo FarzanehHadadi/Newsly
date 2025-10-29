@@ -1,15 +1,38 @@
 import type { NewsItem, NewsSource } from './static-data';
+import { checkNetworkStatus } from './network';
+import * as SecureStore from 'expo-secure-store';
+import {
+  cacheNewsList,
+  getCachedNewsList,
+  cacheSliderArticles,
+  getCachedSliderArticles,
+  cacheArticleDetail,
+  getCachedArticleDetail,
+  cacheSearchResults,
+  getCachedSearchResults,
+} from './offline-cache';
 
-// Constants
 const BASE_URL = 'https://newslyrn.netlify.app/';
 const DEFAULT_LANGUAGE = 'en';
-
-// Type definitions
 interface ApiResponse<T> {
   success: boolean;
   articles?: T[];
   article?: T;
   pagination?: Pagination;
+}
+
+export interface Category {
+  _id: string;
+  name: string;
+  displayName: string;
+  description: string;
+}
+
+interface GetCategoriesResponse {
+  success: boolean;
+  categories: Category[];
+  totalCategories: number;
+  message: string;
 }
 
 interface Pagination {
@@ -41,7 +64,6 @@ interface FetchNewsResponse {
   pagination: Pagination;
 }
 
-// Helper function to transform raw API article to NewsItem
 const transformArticle = (article: RawArticle): NewsItem => {
   const transformSource = (source: string | NewsSource): NewsSource => {
     if (typeof source === 'string') {
@@ -74,7 +96,6 @@ const transformArticle = (article: RawArticle): NewsItem => {
   };
 };
 
-// Helper function to build query string
 const buildQueryString = (params: Record<string, string | number | null>): string => {
   const searchParams = new URLSearchParams();
 
@@ -88,7 +109,6 @@ const buildQueryString = (params: Record<string, string | number | null>): strin
   return queryString ? `?${queryString}` : '';
 };
 
-// Helper function for making API requests
 const apiRequest = async <T>(endpoint: string, params?: Record<string, string | number | null>): Promise<T> => {
   const queryString = params ? buildQueryString(params) : '';
   const url = `${BASE_URL}${endpoint}${queryString}`;
@@ -113,19 +133,45 @@ const apiRequest = async <T>(endpoint: string, params?: Record<string, string | 
   }
 };
 
-/**
- * Fetches news articles with optional category and pagination
- * @param category - Optional category filter
- * @param page - Page number (default: 1)
- * @returns Promise with articles array and pagination info
- */
 export const fetchNews = async (
   category: string | null = null,
   page: number = 1
 ): Promise<FetchNewsResponse> => {
+  const isOnline = await checkNetworkStatus();
+
+  if (!isOnline) {
+    console.log('Offline mode: Loading cached news');
+    const cachedArticles = await getCachedNewsList(page);
+    if (cachedArticles) {
+      return {
+        articles: cachedArticles,
+        pagination: {
+          currentPage: page,
+          hasNextPage: false,
+          hasPreviousPage: page > 1,
+          pageSize: 10,
+          totalArticles: cachedArticles.length,
+          totalPages: 1,
+        },
+      };
+    }
+    return {
+      articles: [],
+      pagination: {
+        currentPage: page,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        pageSize: 10,
+        totalArticles: 0,
+        totalPages: 0,
+      },
+    };
+  }
+
   try {
     const params: Record<string, string | number | null> = {
       page,
+      pageSize: 10,
       ...(category && { category }),
     };
 
@@ -141,6 +187,8 @@ export const fetchNews = async (
         totalArticles: 0,
         totalPages: 0,
       };
+
+      await cacheNewsList(articles, page);
 
       return { articles, pagination };
     }
@@ -158,6 +206,21 @@ export const fetchNews = async (
     };
   } catch (error) {
     console.error('Error fetching news:', error);
+    const cachedArticles = await getCachedNewsList(page);
+    if (cachedArticles) {
+      return {
+        articles: cachedArticles,
+        pagination: {
+          currentPage: page,
+          hasNextPage: false,
+          hasPreviousPage: page > 1,
+          pageSize: 10,
+          totalArticles: cachedArticles.length,
+          totalPages: 1,
+        },
+      };
+    }
+
     return {
       articles: [],
       pagination: {
@@ -172,44 +235,61 @@ export const fetchNews = async (
   }
 };
 
-/**
- * Fetches a single article by ID
- * @param id - Article ID
- * @returns Promise with article object or null if not found
- */
 export const getArticleById = async (id: string): Promise<{ article: NewsItem } | null> => {
-  try {
-    if (!id) {
-      throw new Error('Article ID is required');
-    }
+  if (!id) {
+    return null;
+  }
 
+  const isOnline = await checkNetworkStatus();
+
+  if (!isOnline) {
+    console.log('Offline mode: Loading cached article');
+    const cachedArticle = await getCachedArticleDetail(id);
+    if (cachedArticle) {
+      return { article: cachedArticle };
+    }
+    return null;
+  }
+
+  try {
     const data = await apiRequest<ApiResponse<RawArticle>>('/.netlify/functions/getArticleById', {
       id,
     });
 
     if (data.article) {
       const transformedArticle = transformArticle(data.article);
+      await cacheArticleDetail(id, transformedArticle);
       return { article: transformedArticle };
     }
 
     return null;
   } catch (error) {
     console.error('Error fetching article by ID:', error);
+    const cachedArticle = await getCachedArticleDetail(id);
+    if (cachedArticle) {
+      return { article: cachedArticle };
+    }
     return null;
   }
 };
 
-/**
- * Searches for news articles by query string
- * @param query - Search query string
- * @returns Promise with array of matching articles
- */
 export const searchNews = async (query: string): Promise<NewsItem[]> => {
-  try {
-    if (!query || query.trim() === '') {
-      return [];
-    }
+  if (!query || query.trim() === '') {
+    return [];
+  }
 
+  const isOnline = await checkNetworkStatus();
+
+  if (!isOnline) {
+    console.log('Offline mode: Loading cached search results');
+    const cachedResults = await getCachedSearchResults(query);
+    if (cachedResults) {
+      return cachedResults;
+    }
+    return [];
+  }
+
+  try {
     const params = {
       q: query.trim(),
     };
@@ -217,12 +297,93 @@ export const searchNews = async (query: string): Promise<NewsItem[]> => {
     const data = await apiRequest<ApiResponse<RawArticle>>('/.netlify/functions/searchNews', params);
 
     if (data.articles && Array.isArray(data.articles)) {
-      return data.articles.map(transformArticle);
+      const articles = data.articles.map(transformArticle);
+      await cacheSearchResults(query, articles);
+      return articles;
     }
 
     return [];
   } catch (error) {
     console.error('Error searching news:', error);
+    const cachedResults = await getCachedSearchResults(query);
+    if (cachedResults) {
+      return cachedResults;
+    }
+    return [];
+  }
+};
+
+export const getCategories = async (): Promise<Category[]> => {
+  const isOnline = await checkNetworkStatus();
+  const endpoint = '.netlify/functions/getCategories';
+
+  try {
+    if (!isOnline) {
+      const cachedCategories = await SecureStore.getItemAsync('cached_categories');
+      if (cachedCategories) {
+        try {
+          const parsed = JSON.parse(cachedCategories);
+          return parsed.categories || [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    }
+
+    const response = await apiRequest<GetCategoriesResponse>(endpoint);
+
+    if (response.success && response.categories) {
+      await SecureStore.setItemAsync('cached_categories', JSON.stringify({
+        categories: response.categories,
+        timestamp: Date.now(),
+      }));
+      return response.categories;
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    try {
+      const cachedCategories = await SecureStore.getItemAsync('cached_categories');
+      if (cachedCategories) {
+        const parsed = JSON.parse(cachedCategories);
+        return parsed.categories || [];
+      }
+    } catch {
+    }
+    return [];
+  }
+};
+
+export const getSliderArticles = async (): Promise<NewsItem[]> => {
+  const isOnline = await checkNetworkStatus();
+
+  if (!isOnline) {
+    console.log('Offline mode: Loading cached slider articles');
+    const cachedArticles = await getCachedSliderArticles();
+    if (cachedArticles) {
+      return cachedArticles;
+    }
+    return [];
+  }
+
+  try {
+    const data = await apiRequest<ApiResponse<RawArticle>>('/.netlify/functions/getSliderArticles');
+
+    if (data.articles && Array.isArray(data.articles)) {
+      const articles = data.articles.map(transformArticle);
+      await cacheSliderArticles(articles);
+      return articles;
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error fetching slider articles:', error);
+    const cachedArticles = await getCachedSliderArticles();
+    if (cachedArticles) {
+      return cachedArticles;
+    }
     return [];
   }
 };

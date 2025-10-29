@@ -1,11 +1,11 @@
 import { useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
-  Image,
   StyleSheet,
   View,
   TouchableOpacity,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "@/components/ui/text";
 import { useEffect, useState } from "react";
@@ -14,6 +14,8 @@ import { useTheme } from "@react-navigation/native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { toggleBookmark, isBookmarked } from "@/services/bookmark";
 import type { NewsItem } from "@/services/static-data";
+import { cacheImage } from "@/services/image-cache";
+import * as Haptics from "expo-haptics";
 
 export default function ArticleDetailScreen() {
   const { articleId } = useLocalSearchParams();
@@ -31,6 +33,9 @@ export default function ArticleDetailScreen() {
         const data = await getArticleById(articleId as string);
         if (data?.article) {
           setArticleData(data.article);
+          if (data.article.imageUrl) {
+            cacheImage(data.article.imageUrl).catch(console.error);
+          }
         }
         setIsLoading(false);
       }
@@ -50,6 +55,16 @@ export default function ArticleDetailScreen() {
 
   const handleBookmarkPress = async () => {
     if (articleData) {
+      try {
+        if (isBookmark) {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        } else {
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success
+          );
+        }
+      } catch {}
+
       const newBookmarked = await toggleBookmark(articleData);
       setIsBookmark(newBookmarked);
     }
@@ -57,7 +72,7 @@ export default function ArticleDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
+      <View style={styles.containerLoading}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
@@ -90,7 +105,9 @@ export default function ArticleDetailScreen() {
       <Image
         style={styles.image}
         source={{ uri: articleData.imageUrl }}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={200}
       />
       <Text style={styles.description}>{articleData.description}</Text>
       <Text style={styles.source}>
@@ -121,7 +138,13 @@ const getStyles = (theme: any) =>
       flex: 1,
       paddingHorizontal: 16,
       display: "flex",
-      // alignItems: 'center',
+    },
+    containerLoading: {
+      flex: 1,
+      paddingHorizontal: 16,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
     },
     header: {
       flexDirection: "row",
