@@ -1,33 +1,27 @@
-import { Button } from "@/components/ui/button";
-import CarouselComponent from "@/components/ui/carousel";
-import { useTheme, useFocusEffect } from "@react-navigation/native";
-import { useEffect, useState, useRef, useCallback } from "react";
-import {
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  View,
-  TouchableOpacity,
-  ActivityIndicator,
-  Animated,
-  TextInput,
-} from "react-native";
-import { Image } from "expo-image";
-import { SafeAreaView } from "react-native-safe-area-context";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import type { NewsData } from "@/services/static-data";
-import { useRouter } from "expo-router";
-import { Text } from "@/components/ui/text";
+import { useTheme, useFocusEffect } from '@react-navigation/native';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { FlatList, View, Animated, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { NewsData } from '@/services/static-data';
+import { useRouter } from 'expo-router';
 import {
   fetchNews,
   searchNews,
   getCategories,
   type Category,
-} from "@/services/netlify-news";
-import { toggleBookmark, isBookmarked } from "@/services/bookmark";
-import { useNetworkStatus } from "@/services/network";
-import { cacheImages } from "@/services/image-cache";
-import * as Haptics from "expo-haptics";
+} from '@/services/netlify-news';
+import { toggleBookmark, isBookmarked } from '@/services/bookmark';
+import { useOnlineStatusWithInterval } from '@/services/network';
+import { cacheImages } from '@/services/image-cache';
+import * as Haptics from 'expo-haptics';
+import CarouselComponent from '@/components/ui/carousel';
+import SearchBar from '@/components/home-screen/SearchBar';
+import NewsItem from '@/components/home-screen/NewsItem';
+import EmptyState from '@/components/home-screen/EmptyState';
+import OfflineBadge from '@/components/home-screen/OfflineBadge';
+import CategoryList from '@/components/home-screen/CategoryList';
+import LoadingIndicator from '@/components/home-screen/LoadingIndicator';
+import { getStyles } from './styles';
 
 export default function HomeScreen() {
   const [data, setData] = useState<NewsData>([]);
@@ -36,7 +30,7 @@ export default function HomeScreen() {
   const [hasNextPage, setHasNextPage] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isLoadingCategory, setIsLoadingCategory] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -48,12 +42,17 @@ export default function HomeScreen() {
   const stickySearchTranslateY = useRef(new Animated.Value(-60)).current;
   const searchInputRef = useRef<TextInput>(null);
   const HEADER_HEIGHT = 250;
-  const { isOnline } = useNetworkStatus();
+  // const { isOnline } = useNetworkStatus();
+  const isOnline = useOnlineStatusWithInterval(30000);
+
+  const theme = useTheme();
+  const styles = getStyles(theme);
+  const router = useRouter();
 
   const refreshBookmarks = useCallback(async () => {
     if (isManualToggleRef.current) {
       isManualToggleRef.current = false;
-      return; // Skip loading bookmarks if we just manually toggled
+      return;
     }
 
     if (data.length === 0) return;
@@ -88,30 +87,30 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      if (!isSearchMode) {
-        try {
-          const result = await fetchNews(selectedCategory, 1);
-          if (result && result.articles) {
-            setData(result.articles);
-            setHasNextPage(result.pagination?.hasNextPage || false);
-            setCurrentPage(1);
-            const imageUrls = result.articles
-              .map((item) => item.imageUrl)
-              .filter((url): url is string => Boolean(url));
-            if (imageUrls.length > 0) {
-              cacheImages(imageUrls).catch(console.error);
-            }
-          } else {
-            setData([]);
-            setHasNextPage(false);
-            setCurrentPage(1);
+      if (isSearchMode) return;
+
+      try {
+        const result = await fetchNews(selectedCategory, 1);
+        if (result && result.articles) {
+          setData(result.articles);
+          setHasNextPage(result.pagination?.hasNextPage || false);
+          setCurrentPage(1);
+          const imageUrls = result.articles
+            .map((item) => item.imageUrl)
+            .filter((url): url is string => Boolean(url));
+          if (imageUrls.length > 0) {
+            cacheImages(imageUrls).catch(console.error);
           }
-        } catch (error) {
-          console.error("Error loading initial data:", error);
+        } else {
           setData([]);
           setHasNextPage(false);
           setCurrentPage(1);
         }
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+        setData([]);
+        setHasNextPage(false);
+        setCurrentPage(1);
       }
     };
     loadInitialData();
@@ -159,10 +158,10 @@ export default function HomeScreen() {
     return () => {
       scrollY.removeListener(listener);
     };
-  }, []);
+  }, [scrollY, stickySearchOpacity, stickySearchTranslateY]);
 
   const handleSearch = async () => {
-    if (searchQuery.trim() === "") {
+    if (searchQuery.trim() === '') {
       setIsSearchMode(false);
       setSelectedCategory(null);
       const result = await fetchNews(null, 1);
@@ -196,7 +195,7 @@ export default function HomeScreen() {
   const handleCategoryPress = async (categoryName: string | null) => {
     setSelectedCategory(categoryName);
     setIsSearchMode(false);
-    setSearchQuery("");
+    setSearchQuery('');
 
     setIsLoadingCategory(true);
     setData([]);
@@ -219,7 +218,7 @@ export default function HomeScreen() {
         setCurrentPage(1);
       }
     } catch (error) {
-      console.error("Error loading category news:", error);
+      console.error('Error loading category news:', error);
       setData([]);
       setHasNextPage(false);
       setCurrentPage(1);
@@ -293,14 +292,14 @@ export default function HomeScreen() {
     }, 300);
   };
 
-  const theme = useTheme();
-  const styles = getStyles(theme);
-  const router = useRouter();
-
   const stickySearchAnimatedStyle = {
     opacity: stickySearchOpacity,
     transform: [{ translateY: stickySearchTranslateY }],
   };
+
+  const categoryDisplayName =
+    categories.find((c) => c.name === selectedCategory)?.displayName ||
+    selectedCategory;
 
   return (
     <SafeAreaView style={styles.container} edges={[]}>
@@ -313,32 +312,13 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.stickySearchInner}>
-          {!isOnline && (
-            <View style={styles.stickyOfflineBadge}>
-              <MaterialCommunityIcons name="wifi-off" size={14} color="#fff" />
-              <Text style={styles.stickyOfflineBadgeText}>Offline</Text>
-            </View>
-          )}
-          <View style={styles.inputWrapper}>
-            <TextInput
-              ref={searchInputRef}
-              style={[styles.searchInput, { color: theme.colors.text }]}
-              placeholder="Search"
-              placeholderTextColor={
-                (theme.colors as any).secondaryText || "#666"
-              }
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-            />
-            <TouchableOpacity style={styles.iconWrapper} onPress={handleSearch}>
-              <MaterialCommunityIcons
-                name="magnify"
-                size={24}
-                color={theme.colors.text}
-              />
-            </TouchableOpacity>
-          </View>
+          {!isOnline && <OfflineBadge variant="sticky" />}
+          <SearchBar
+            searchQuery={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            inputRef={searchInputRef}
+          />
         </View>
       </Animated.View>
 
@@ -352,161 +332,48 @@ export default function HomeScreen() {
         onEndReached={loadMoreArticles}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          isLoadingMore ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-            </View>
-          ) : null
+          isLoadingMore ? <LoadingIndicator variant="small" /> : null
         }
         ListEmptyComponent={
           isSearching || isLoadingCategory ? (
-            <View style={styles.listLoadingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-            </View>
+            <LoadingIndicator variant="large" />
           ) : data.length === 0 ? (
-            <View style={styles.emptyStateContainer}>
-              <MaterialCommunityIcons
-                name={isSearchMode ? "magnify" : "newspaper-variant-outline"}
-                size={64}
-                color={(theme.colors as any).secondaryText || "#999"}
-              />
-              <Text
-                style={[styles.emptyStateTitle, { color: theme.colors.text }]}
-              >
-                {isSearchMode ? "No results found" : "No articles found"}
-              </Text>
-              <Text
-                style={[
-                  styles.emptyStateMessage,
-                  { color: (theme.colors as any).secondaryText || "#666" },
-                ]}
-              >
-                {isSearchMode
-                  ? `No articles found for "${searchQuery}". Try a different search term.`
-                  : selectedCategory
-                  ? `No articles available in ${
-                      categories.find((c) => c.name === selectedCategory)
-                        ?.displayName || selectedCategory
-                    } category.`
-                  : "No articles available at the moment. Please try again later."}
-              </Text>
-            </View>
+            <EmptyState
+              isSearchMode={isSearchMode}
+              searchQuery={searchQuery}
+              selectedCategory={selectedCategory}
+              categoryDisplayName={categoryDisplayName}
+            />
           ) : null
         }
         ListHeaderComponent={
           <>
-            {/* Offline Badge in Header */}
-            {!isOnline && (
-              <View style={styles.offlineBadge}>
-                <MaterialCommunityIcons
-                  name="wifi-off"
-                  size={16}
-                  color="#fff"
-                />
-                <Text style={styles.offlineBadgeText}>Offline</Text>
-              </View>
-            )}
+            {!isOnline && <OfflineBadge />}
 
-            {/* Search Bar with right icon */}
             <View style={styles.searchContainer}>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={[styles.searchInput, { color: theme.colors.text }]}
-                  placeholder="Search"
-                  placeholderTextColor={
-                    (theme.colors as any).secondaryText || "#666"
-                  }
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  onSubmitEditing={handleSearch}
-                />
-                <TouchableOpacity
-                  style={styles.iconWrapper}
-                  onPress={handleSearch}
-                >
-                  <MaterialCommunityIcons
-                    name="magnify"
-                    size={24}
-                    color={theme.colors.text}
-                  />
-                </TouchableOpacity>
-              </View>
+              <SearchBar
+                searchQuery={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearch}
+              />
             </View>
 
-            {/* Categories */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryContainer}
-              bounces={false}
-              alwaysBounceHorizontal={false}
-            >
-              <Button
-                variant="link"
-                size="sm"
-                label="All"
-                onPress={() => handleCategoryPress(null)}
-              />
-              {categories.map((category) => (
-                <Button
-                  key={category._id}
-                  variant="link"
-                  size="sm"
-                  label={category.displayName}
-                  onPress={() => handleCategoryPress(category.name)}
-                />
-              ))}
-            </ScrollView>
+            <CategoryList
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onCategoryPress={handleCategoryPress}
+            />
 
-            {/* Carousel */}
             <CarouselComponent />
           </>
         }
         renderItem={({ item }) => (
-          <View style={styles.list}>
-            <TouchableOpacity
-              style={styles.listContent}
-              onPress={() => router.push(`/article/${item._id}`)}
-              activeOpacity={0.7}
-            >
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.itemImage}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={200}
-              />
-              <View style={styles.textContainer}>
-                <Text
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  style={styles.itemTitle}
-                >
-                  {item.title}
-                </Text>
-                <Text
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                  style={styles.itemDescription}
-                >
-                  {item.description}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.bookmarkButton}
-              onPress={() => handleBookmarkPress(item)}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons
-                name={
-                  bookmarkedIds.has(item._id) ? "bookmark" : "bookmark-outline"
-                }
-                size={24}
-                color={bookmarkedIds.has(item._id) ? "#007AFF" : "#666"}
-              />
-            </TouchableOpacity>
-          </View>
+          <NewsItem
+            item={item}
+            isBookmarked={bookmarkedIds.has(item._id)}
+            onPress={() => router.push(`/article/${item._id}`)}
+            onBookmarkPress={() => handleBookmarkPress(item)}
+          />
         )}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.contentContainer}
@@ -515,168 +382,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-const getStyles = (theme: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.colors.background,
-    },
-    stickySearchContainer: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 1000,
-      paddingTop: 10,
-      paddingBottom: 10,
-      shadowColor: "#000",
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 3.84,
-      elevation: 5,
-    },
-    stickySearchInner: {
-      paddingHorizontal: 16,
-    },
-    searchContainer: {
-      width: "100%",
-      marginBottom: 15,
-      paddingHorizontal: 16,
-      marginTop: 10,
-    },
-    inputWrapper: {
-      width: "100%",
-      position: "relative",
-      justifyContent: "center",
-    },
-    searchInput: {
-      width: "100%",
-      backgroundColor: "#eaeaea",
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      paddingRight: 40, // space for the icon
-      fontSize: 16,
-    },
-    iconWrapper: {
-      position: "absolute",
-      right: 12,
-      top: "50%",
-      transform: [{ translateY: -12 }],
-    },
-    categoryContainer: {
-      paddingHorizontal: 16,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "flex-start",
-      gap: 8,
-      marginBottom: 20,
-    },
-    list: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: 8,
-      width: "100%",
-      marginVertical: 15,
-      paddingHorizontal: 16,
-    },
-    listContent: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      flex: 1,
-    },
-    bookmarkButton: {
-      padding: 4,
-    },
-    itemImage: {
-      width: 56,
-      height: 56,
-      borderRadius: 12,
-      backgroundColor: "#e0e0e0",
-    },
-    textContainer: {
-      flex: 1,
-      gap: 6,
-    },
-    itemTitle: {
-      color: theme.colors.text,
-      fontWeight: "500",
-      fontSize: 18,
-    },
-    itemDescription: {
-      fontWeight: "400",
-      color: theme.colors.text,
-      fontSize: 12,
-    },
-    contentContainer: {
-      paddingBottom: 80,
-    },
-    loadingContainer: {
-      paddingVertical: 20,
-      alignItems: "center",
-    },
-    listLoadingContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      minHeight: 400,
-      paddingVertical: 40,
-    },
-    emptyStateContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      minHeight: 400,
-      paddingVertical: 60,
-      paddingHorizontal: 32,
-    },
-    emptyStateTitle: {
-      fontSize: 20,
-      fontWeight: "600",
-      marginTop: 24,
-      marginBottom: 8,
-      textAlign: "center",
-    },
-    emptyStateMessage: {
-      fontSize: 16,
-      textAlign: "center",
-      lineHeight: 24,
-    },
-    offlineBadge: {
-      backgroundColor: "#ff4444",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      gap: 6,
-    },
-    offlineBadgeText: {
-      color: "#fff",
-      fontSize: 12,
-      fontWeight: "600",
-    },
-    stickyOfflineBadge: {
-      backgroundColor: "#ff4444",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      gap: 4,
-      borderRadius: 4,
-      marginBottom: 8,
-      alignSelf: "flex-start",
-    },
-    stickyOfflineBadgeText: {
-      color: "#fff",
-      fontSize: 10,
-      fontWeight: "600",
-    },
-  });
