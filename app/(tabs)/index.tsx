@@ -2,7 +2,10 @@ import { useTheme, useFocusEffect } from '@react-navigation/native';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { FlatList, View, Animated, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { NewsData } from '@/services/static-data';
+import type {
+  NewsData,
+  NewsItem as NewsItemType,
+} from '@/services/static-data';
 import { useRouter } from 'expo-router';
 import {
   fetchNews,
@@ -253,7 +256,7 @@ export default function HomeScreen() {
     setIsLoadingMore(false);
   };
 
-  const handleBookmarkPress = async (item: NewsData[0]) => {
+  const handleBookmarkPress = async (item: NewsItemType) => {
     isManualToggleRef.current = true;
     const currentlyBookmarked = bookmarkedIds.has(item._id);
 
