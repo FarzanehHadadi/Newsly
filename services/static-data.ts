@@ -214,4 +214,6 @@ export interface NewsItem {
   source: NewsSource;
 }
 
-export type NewsData = NewsItem[];
+export type NewsData = {
+  articles: NewsItem[];
+};

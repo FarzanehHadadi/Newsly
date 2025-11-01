@@ -24,7 +24,6 @@ import LoadingIndicator from '@/components/home-screen/LoadingIndicator';
 import { getStyles } from './_styles';
 
 export default function HomeScreen() {
-  const [data, setData] = useState<NewsData>([]);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
@@ -36,6 +35,7 @@ export default function HomeScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const isManualToggleRef = useRef(false);
+  const [data, setData] = useState<NewsData>({ articles: [] });
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const stickySearchOpacity = useRef(new Animated.Value(0)).current;
@@ -55,10 +55,10 @@ export default function HomeScreen() {
       return;
     }
 
-    if (data.length === 0) return;
+    if (data?.articles?.length === 0) return;
 
     const ids = new Set<string>();
-    for (const item of data) {
+    for (const item of data?.articles) {
       const bookmarked = await isBookmarked(item._id);
       if (bookmarked) ids.add(item._id);
     }
@@ -71,10 +71,10 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (data.length > 0 && !isManualToggleRef.current) {
+      if (data?.articles?.length > 0 && !isManualToggleRef.current) {
         const refresh = async () => {
           const ids = new Set<string>();
-          for (const item of data) {
+          for (const item of data?.articles) {
             const bookmarked = await isBookmarked(item._id);
             if (bookmarked) ids.add(item._id);
           }
@@ -92,7 +92,7 @@ export default function HomeScreen() {
       try {
         const result = await fetchNews(selectedCategory, 1);
         if (result && result.articles) {
-          setData(result.articles);
+          setData({ articles: result.articles });
           setHasNextPage(result.pagination?.hasNextPage || false);
           setCurrentPage(1);
           const imageUrls = result.articles
@@ -102,13 +102,13 @@ export default function HomeScreen() {
             cacheImages(imageUrls).catch(console.error);
           }
         } else {
-          setData([]);
+          setData({ articles: [] });
           setHasNextPage(false);
           setCurrentPage(1);
         }
       } catch (error) {
         console.error('Error loading initial data:', error);
-        setData([]);
+        setData({ articles: [] });
         setHasNextPage(false);
         setCurrentPage(1);
       }
@@ -165,7 +165,7 @@ export default function HomeScreen() {
       setIsSearchMode(false);
       setSelectedCategory(null);
       const result = await fetchNews(null, 1);
-      setData(result.articles);
+      setData({ articles: result.articles });
       setHasNextPage(result.pagination.hasNextPage || false);
       setCurrentPage(1);
       const imageUrls = result.articles
@@ -181,7 +181,7 @@ export default function HomeScreen() {
     setIsSearchMode(true);
     setSelectedCategory(null);
     const results = await searchNews(searchQuery);
-    setData(results);
+    setData({ articles: results });
     setHasNextPage(false);
     setIsSearching(false);
     const imageUrls = results
@@ -198,12 +198,12 @@ export default function HomeScreen() {
     setSearchQuery('');
 
     setIsLoadingCategory(true);
-    setData([]);
+    setData({ articles: [] });
 
     try {
       const result = await fetchNews(categoryName, 1);
       if (result && result.articles) {
-        setData(result.articles);
+        setData({ articles: result.articles });
         setHasNextPage(result.pagination?.hasNextPage || false);
         setCurrentPage(1);
         const imageUrls = result.articles
@@ -213,13 +213,13 @@ export default function HomeScreen() {
           cacheImages(imageUrls).catch(console.error);
         }
       } else {
-        setData([]);
+        setData({ articles: [] } as NewsData);
         setHasNextPage(false);
         setCurrentPage(1);
       }
     } catch (error) {
       console.error('Error loading category news:', error);
-      setData([]);
+      setData({ articles: [] } as NewsData);
       setHasNextPage(false);
       setCurrentPage(1);
     } finally {
@@ -241,7 +241,10 @@ export default function HomeScreen() {
       if (imageUrls.length > 0) {
         cacheImages(imageUrls).catch(console.error);
       }
-      setData((prev) => [...prev, ...result.articles]);
+      setData((prev) => ({
+        ...prev,
+        articles: [...prev.articles, ...result.articles],
+      }));
       setHasNextPage(result.pagination.hasNextPage || false);
       setCurrentPage(nextPage);
     } else {
@@ -321,7 +324,7 @@ export default function HomeScreen() {
       </Animated.View>
 
       <FlatList
-        data={isSearching || isLoadingCategory ? [] : data}
+        data={isSearching || isLoadingCategory ? [] : data?.articles}
         onScroll={(e) => {
           const offsetY = e.nativeEvent.contentOffset.y;
           scrollY.setValue(offsetY);
@@ -335,7 +338,7 @@ export default function HomeScreen() {
         ListEmptyComponent={
           isSearching || isLoadingCategory ? (
             <LoadingIndicator variant="large" />
-          ) : data.length === 0 ? (
+          ) : data?.articles?.length === 0 ? (
             <EmptyState
               isSearchMode={isSearchMode}
               searchQuery={searchQuery}
