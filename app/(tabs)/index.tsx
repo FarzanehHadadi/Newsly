@@ -21,7 +21,7 @@ import EmptyState from '@/components/home-screen/EmptyState';
 import OfflineBadge from '@/components/home-screen/OfflineBadge';
 import CategoryList from '@/components/home-screen/CategoryList';
 import LoadingIndicator from '@/components/home-screen/LoadingIndicator';
-import { getStyles } from './styles';
+import { getStyles } from './_styles';
 
 export default function HomeScreen() {
   const [data, setData] = useState<NewsData>([]);
@@ -258,9 +258,7 @@ export default function HomeScreen() {
       if (currentlyBookmarked) {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } else {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success
-        );
+        await Haptics.selectionAsync();
       }
     } catch {}
 

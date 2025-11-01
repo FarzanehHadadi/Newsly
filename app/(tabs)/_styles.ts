@@ -165,3 +165,4 @@ export const getStyles = (theme: Theme) =>
       fontWeight: '600',
     },
   });
+
