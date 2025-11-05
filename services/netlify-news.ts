@@ -75,12 +75,14 @@ const transformArticle = (article: RawArticle): NewsItem => {
       };
     }
 
-    return source || {
-      id: null,
-      name: 'Unknown',
-      url: '',
-      country: '',
-    };
+    return (
+      source || {
+        id: null,
+        name: 'Unknown',
+        url: '',
+        country: '',
+      }
+    );
   };
 
   return {
@@ -96,7 +98,9 @@ const transformArticle = (article: RawArticle): NewsItem => {
   };
 };
 
-const buildQueryString = (params: Record<string, string | number | null>): string => {
+const buildQueryString = (
+  params: Record<string, string | number | null>
+): string => {
   const searchParams = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
@@ -109,7 +113,10 @@ const buildQueryString = (params: Record<string, string | number | null>): strin
   return queryString ? `?${queryString}` : '';
 };
 
-const apiRequest = async <T>(endpoint: string, params?: Record<string, string | number | null>): Promise<T> => {
+export const apiRequest = async <T>(
+  endpoint: string,
+  params?: Record<string, string | number | null>
+): Promise<T> => {
   const queryString = params ? buildQueryString(params) : '';
   const url = `${BASE_URL}${endpoint}${queryString}`;
 
@@ -118,6 +125,19 @@ const apiRequest = async <T>(endpoint: string, params?: Record<string, string | 
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Check if response is JSON before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error(
+        `Non-JSON response from ${endpoint}:`,
+        text.substring(0, 200)
+      );
+      throw new Error(
+        `API returned non-JSON response (${contentType}). This might be an error page.`
+      );
     }
 
     const data: ApiResponse<T> = await response.json();
@@ -175,7 +195,10 @@ export const fetchNews = async (
       ...(category && { category }),
     };
 
-    const data = await apiRequest<ApiResponse<RawArticle>>('/.netlify/functions/getNews', params);
+    const data = await apiRequest<ApiResponse<RawArticle>>(
+      '/.netlify/functions/getNews',
+      params
+    );
 
     if (data.articles && Array.isArray(data.articles)) {
       const articles = data.articles.map(transformArticle);
@@ -235,7 +258,9 @@ export const fetchNews = async (
   }
 };
 
-export const getArticleById = async (id: string): Promise<{ article: NewsItem } | null> => {
+export const getArticleById = async (
+  id: string
+): Promise<{ article: NewsItem } | null> => {
   if (!id) {
     return null;
   }
@@ -252,9 +277,12 @@ export const getArticleById = async (id: string): Promise<{ article: NewsItem } 
   }
 
   try {
-    const data = await apiRequest<ApiResponse<RawArticle>>('/.netlify/functions/getArticleById', {
-      id,
-    });
+    const data = await apiRequest<ApiResponse<RawArticle>>(
+      '/.netlify/functions/getArticleById',
+      {
+        id,
+      }
+    );
 
     if (data.article) {
       const transformedArticle = transformArticle(data.article);
@@ -294,7 +322,10 @@ export const searchNews = async (query: string): Promise<NewsItem[]> => {
       q: query.trim(),
     };
 
-    const data = await apiRequest<ApiResponse<RawArticle>>('/.netlify/functions/searchNews', params);
+    const data = await apiRequest<ApiResponse<RawArticle>>(
+      '/.netlify/functions/searchNews',
+      params
+    );
 
     if (data.articles && Array.isArray(data.articles)) {
       const articles = data.articles.map(transformArticle);
@@ -319,7 +350,9 @@ export const getCategories = async (): Promise<Category[]> => {
 
   try {
     if (!isOnline) {
-      const cachedCategories = await SecureStore.getItemAsync('cached_categories');
+      const cachedCategories = await SecureStore.getItemAsync(
+        'cached_categories'
+      );
       if (cachedCategories) {
         try {
           const parsed = JSON.parse(cachedCategories);
@@ -334,10 +367,13 @@ export const getCategories = async (): Promise<Category[]> => {
     const response = await apiRequest<GetCategoriesResponse>(endpoint);
 
     if (response.success && response.categories) {
-      await SecureStore.setItemAsync('cached_categories', JSON.stringify({
-        categories: response.categories,
-        timestamp: Date.now(),
-      }));
+      await SecureStore.setItemAsync(
+        'cached_categories',
+        JSON.stringify({
+          categories: response.categories,
+          timestamp: Date.now(),
+        })
+      );
       return response.categories;
     }
 
@@ -345,13 +381,14 @@ export const getCategories = async (): Promise<Category[]> => {
   } catch (error) {
     console.error('Error fetching categories:', error);
     try {
-      const cachedCategories = await SecureStore.getItemAsync('cached_categories');
+      const cachedCategories = await SecureStore.getItemAsync(
+        'cached_categories'
+      );
       if (cachedCategories) {
         const parsed = JSON.parse(cachedCategories);
         return parsed.categories || [];
       }
-    } catch {
-    }
+    } catch {}
     return [];
   }
 };
@@ -369,7 +406,9 @@ export const getSliderArticles = async (): Promise<NewsItem[]> => {
   }
 
   try {
-    const data = await apiRequest<ApiResponse<RawArticle>>('/.netlify/functions/getSliderArticles');
+    const data = await apiRequest<ApiResponse<RawArticle>>(
+      '/.netlify/functions/getSliderArticles'
+    );
 
     if (data.articles && Array.isArray(data.articles)) {
       const articles = data.articles.map(transformArticle);
