@@ -16,7 +16,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@react-navigation/native';
 import { getSliderArticles } from '@/services/netlify-news';
@@ -47,6 +47,7 @@ function CarouselItemComponent({
   styles: any;
 }) {
   const hoverProgress = useSharedValue(0);
+  const hasAnimated = useRef(false);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -59,21 +60,18 @@ function CarouselItemComponent({
     };
   });
 
-  const handlePressIn = () => {
-    hoverProgress.value = withTiming(1, { duration: 300 });
-  };
+  useEffect(() => {
+    // Automatically show animation when image initially appears
+    if (!hasAnimated.current) {
+      hoverProgress.value = withTiming(1, { duration: 300 });
+      hasAnimated.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handlePressOut = () => {
-    hoverProgress.value = withTiming(0, { duration: 300 });
-  };
   const colorScheme = useColorScheme();
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.9}
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}>
+    <TouchableOpacity style={styles.card} activeOpacity={1} onPress={onPress}>
       <Image
         source={{ uri: item.image }}
         style={styles.image}
@@ -82,12 +80,15 @@ function CarouselItemComponent({
         transition={200}
       />
       <Animated.View style={[styles.textContainer, animatedStyle]}>
-        <BlurView intensity={60} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={styles.blurContainer}>
-          <Text numberOfLines={1} ellipsizeMode='tail' style={styles.itemTitle}>
+        <BlurView
+          intensity={20}
+          tint={colorScheme === 'dark' ? 'dark' : 'light'}
+          style={styles.blurContainer}>
+          <Text numberOfLines={2} ellipsizeMode='tail' style={styles.itemTitle}>
             {item.article.title}
           </Text>
           <Text
-            numberOfLines={2}
+            numberOfLines={4}
             ellipsizeMode='tail'
             style={styles.itemDescription}>
             {item.article.description}
@@ -108,7 +109,8 @@ export default function CarouselComponent({
   const progress = useSharedValue(0);
   const router = useRouter();
   const theme = useTheme();
-  const styles = getStyles(theme);
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = getStyles(theme, colorScheme);
   useEffect(() => {
     const loadSliderArticles = async () => {
       setIsLoading(true);
@@ -181,7 +183,7 @@ export default function CarouselComponent({
   );
 }
 
-const getStyles = (theme: Theme) =>
+const getStyles = (theme: Theme, colorScheme: 'light' | 'dark') =>
   StyleSheet.create({
     container: {
       alignItems: 'center',
@@ -214,6 +216,8 @@ const getStyles = (theme: Theme) =>
     textContainer: {
       position: 'absolute',
       bottom: 0,
+      height: '100%',
+      width: '100%',
       left: 0,
       right: 0,
       overflow: 'hidden',
@@ -223,5 +227,9 @@ const getStyles = (theme: Theme) =>
       gap: 6,
       paddingHorizontal: 20,
       paddingVertical: '5%',
+      backgroundColor:
+        colorScheme === 'dark'
+          ? 'rgba(0, 0, 0, 0.3)'
+          : 'rgba(255, 255, 255, 0.3)',
     },
   });
