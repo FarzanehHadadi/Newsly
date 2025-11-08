@@ -22,6 +22,7 @@ import { useTheme } from '@react-navigation/native';
 import { getSliderArticles } from '@/services/netlify-news';
 import type { NewsItem } from '@/services/static-data';
 import { cacheImages } from '@/services/image-cache';
+import { useColorScheme } from '@/hooks/use-color-scheme.web';
 
 const { width } = Dimensions.get('window');
 
@@ -65,7 +66,7 @@ function CarouselItemComponent({
   const handlePressOut = () => {
     hoverProgress.value = withTiming(0, { duration: 300 });
   };
-
+  const colorScheme = useColorScheme();
   return (
     <TouchableOpacity
       style={styles.card}
@@ -81,7 +82,7 @@ function CarouselItemComponent({
         transition={200}
       />
       <Animated.View style={[styles.textContainer, animatedStyle]}>
-        <BlurView intensity={60} tint='dark' style={styles.blurContainer}>
+        <BlurView intensity={60} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={styles.blurContainer}>
           <Text numberOfLines={1} ellipsizeMode='tail' style={styles.itemTitle}>
             {item.article.title}
           </Text>
