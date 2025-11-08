@@ -20,20 +20,21 @@ export default function CategoryList({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
       bounces={false}
-      alwaysBounceHorizontal={false}
-    >
+      alwaysBounceHorizontal={false}>
       <Button
-        variant="link"
-        size="sm"
-        label="All"
+        variant='link'
+        size='sm'
+        label='All'
+        active={selectedCategory === null}
         onPress={() => onCategoryPress(null)}
       />
       {categories.map((category) => (
         <Button
           key={category._id}
-          variant="link"
-          size="sm"
+          variant='link'
+          size='sm'
           label={category.displayName}
+          active={selectedCategory === category.name}
           onPress={() => onCategoryPress(category.name)}
         />
       ))}

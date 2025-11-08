@@ -1,6 +1,7 @@
 import { useTheme, useFocusEffect } from '@react-navigation/native';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { FlatList, View, Animated, TextInput } from 'react-native';
+import { FlatList, View, TextInput } from 'react-native';
+import Animated, { useSharedValue, useAnimatedReaction, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type {
   NewsData,
@@ -40,9 +41,9 @@ export default function HomeScreen() {
   const isManualToggleRef = useRef(false);
   const [data, setData] = useState<NewsData>({ articles: [] });
 
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const stickySearchOpacity = useRef(new Animated.Value(0)).current;
-  const stickySearchTranslateY = useRef(new Animated.Value(-60)).current;
+  const scrollY = useSharedValue(0);
+  const stickySearchOpacity = useSharedValue(0);
+  const stickySearchTranslateY = useSharedValue(-60);
   const searchInputRef = useRef<TextInput>(null);
   const HEADER_HEIGHT = 250;
   // const { isOnline } = useNetworkStatus();
@@ -127,41 +128,18 @@ export default function HomeScreen() {
     loadCategories();
   }, []);
 
-  useEffect(() => {
-    const listener = scrollY.addListener(({ value }) => {
+  useAnimatedReaction(
+    () => scrollY.value,
+    (value) => {
       if (value > HEADER_HEIGHT) {
-        Animated.parallel([
-          Animated.timing(stickySearchOpacity, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(stickySearchTranslateY, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]).start();
+        stickySearchOpacity.value = withTiming(1, { duration: 200 });
+        stickySearchTranslateY.value = withTiming(0, { duration: 200 });
       } else {
-        Animated.parallel([
-          Animated.timing(stickySearchOpacity, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(stickySearchTranslateY, {
-            toValue: -60,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]).start();
+        stickySearchOpacity.value = withTiming(0, { duration: 200 });
+        stickySearchTranslateY.value = withTiming(-60, { duration: 200 });
       }
-    });
-
-    return () => {
-      scrollY.removeListener(listener);
-    };
-  }, [scrollY, stickySearchOpacity, stickySearchTranslateY]);
+    }
+  );
 
   const handleSearch = async () => {
     if (searchQuery.trim() === '') {
@@ -296,10 +274,12 @@ export default function HomeScreen() {
     }, 300);
   };
 
-  const stickySearchAnimatedStyle = {
-    opacity: stickySearchOpacity,
-    transform: [{ translateY: stickySearchTranslateY }],
-  };
+  const stickySearchAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: stickySearchOpacity.value,
+      transform: [{ translateY: stickySearchTranslateY.value }],
+    };
+  });
 
   const categoryDisplayName =
     categories.find((c) => c.name === selectedCategory)?.displayName ||
@@ -330,7 +310,7 @@ export default function HomeScreen() {
         data={isSearching || isLoadingCategory ? [] : data?.articles}
         onScroll={(e) => {
           const offsetY = e.nativeEvent.contentOffset.y;
-          scrollY.setValue(offsetY);
+          scrollY.value = offsetY;
         }}
         scrollEventThrottle={16}
         onEndReached={loadMoreArticles}

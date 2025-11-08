@@ -2,6 +2,7 @@ import React from 'react';
 import type { PressableProps, View, ViewStyle, TextStyle } from 'react-native';
 import { ActivityIndicator, Pressable, Text, StyleSheet } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@react-navigation/native';
 
 type ButtonVariant =
   | 'default'
@@ -19,6 +20,7 @@ interface Props extends Omit<PressableProps, 'disabled'> {
   size?: ButtonSize;
   disabled?: boolean;
   fullWidth?: boolean;
+  active?: boolean;
   testID?: string;
 }
 
@@ -31,12 +33,14 @@ export const Button = React.forwardRef<View, Props>(
       disabled = false,
       size = 'default',
       fullWidth = true,
+      active = false,
       testID,
       ...props
     },
     ref
   ) => {
     const colorScheme = useColorScheme();
+    const theme = useTheme();
     const isDark = colorScheme === 'dark';
 
     const getContainerStyles = (): ViewStyle => {
@@ -142,6 +146,11 @@ export const Button = React.forwardRef<View, Props>(
         case 'link':
           baseStyles.color = isDark ? '#ffffff' : '#000000';
           break;
+      }
+
+      if (active && variant === 'link') {
+        baseStyles.color = theme.colors.primary;
+        baseStyles.fontWeight = '700';
       }
 
       // Disabled styles
