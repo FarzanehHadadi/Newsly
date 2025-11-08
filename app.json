@@ -2,6 +2,7 @@
   "expo": {
     "name": "NewsLy",
     "slug": "NewsLy",
+    "owner": "newsly-group",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -49,10 +50,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "a85a579d-bd68-492a-ace7-8ba91aef45dd"
-      }
+      "router": {}
     }
   }
 }
